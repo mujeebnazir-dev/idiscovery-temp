@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarTrigger } from '@/components/ui/sidebar'
-import { PlusCircle, MessageCircle, Settings, LogOut, Menu } from 'lucide-react'
+import { PlusCircle, MessageCircle, Settings, LogOut, Menu, ArrowLeftSquare } from 'lucide-react'
 import Logo from '../Logo'
 
 const ChatSidebar = () => {
@@ -17,16 +17,17 @@ const ChatSidebar = () => {
         <Sidebar className='w-[240px]'>
             {/* Header */}
             <SidebarHeader className='flex flex-col'>
-                <div>
+                <div className='flex flex-row'>
                     <Logo className="w-[132px] h-[39px]" />
                     <SidebarTrigger>
-                        <Button variant="ghost" size="sm" className="p-1">
-                            <Menu className="w-4 h-4" />
+                        <Button variant="ghost" size="lg" className="p-1">
+                            <Menu className="w-12 h-12" />
                         </Button>
                     </SidebarTrigger>
                 </div>
-                <div>
-
+                <div className="w-full mt-4 justify-start text-gray-600">
+                    <ArrowLeftSquare className="w-4 h-4 mr-2" />
+                    <p>Back</p>
                 </div>
 
 
