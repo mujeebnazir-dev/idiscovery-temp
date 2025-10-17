@@ -12,8 +12,8 @@ export default function ChatLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <div className="min-h-screen bg-[#FCF7EE]">
-            <SidebarProvider>
+        <div className="min-h-screen bg-[#FCF7EE]  w-full ">
+            <SidebarProvider >
                 <div className="w-full max-w-[1440px] mx-auto">
                     {children}
                 </div>

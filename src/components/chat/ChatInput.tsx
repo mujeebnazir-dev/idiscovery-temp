@@ -1,68 +1,64 @@
-"use client"
-import React, { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Send, Paperclip, Mic } from 'lucide-react'
+// filepath: c:\Users\Mujeeb Nazir\Desktop\onecell\idiscovery-temp\src\components\chat\ChatInput.tsx
+"use client";
+import React, { useState } from 'react';
+import { Plus, Mic, Send } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ChatInputProps {
-    chatId: string
+    onSendMessage: (message: string) => void
 }
 
-const ChatInput = ({ chatId }: ChatInputProps) => {
-    const [message, setMessage] = useState('')
+const ChatInput = ({ onSendMessage }: ChatInputProps) => {
+    const [message, setMessage] = useState('');
 
-    const handleSend = () => {
+    const handleSubmit = () => {
         if (message.trim()) {
-            // Handle send message logic here
-            console.log('Sending message:', message)
-            setMessage('')
+            onSendMessage(message)
+            setMessage('');
         }
-    }
+    };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            handleSend()
+            e.preventDefault();
+            handleSubmit();
         }
-    }
+    };
 
     return (
-        <div className="border-t border-gray-200 bg-white p-4">
-            <div className="max-w-4xl mx-auto">
-                <div className="flex items-end gap-3">
-                    <Button variant="ghost" size="sm" className="text-gray-500">
-                        <Paperclip className="w-4 h-4" />
-                    </Button>
+        <div className="w-full">
+            <div className="w-full h-[64px] opacity-100 rounded-[12px] border bg-white shadow-lg p-2 flex items-center gap-2">
+                <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask me anything you'd like to discover..."
+                    className="border-none w-full resize-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base placeholder:text-gray-400 bg-transparent flex items-center h-[48px] py-3"
+                    rows={1}
+                    style={{
+                        lineHeight: '48px',
+                        paddingTop: '12px',
+                        paddingBottom: '12px',
+                        scrollBehavior: 'smooth',
+                        scrollbarColor: 'transparent',
+                        scrollbarWidth: 'none'
+                    }}
+                />
 
-                    <div className="flex-1">
-                        <Textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Ask about cancer patient data, treatment options, or clinical insights..."
-                            className="min-h-[60px] max-h-32 resize-none border-gray-200 focus:border-[#1A365D] focus:ring-[#1A365D]"
-                        />
-                    </div>
-
-                    <Button variant="ghost" size="sm" className="text-gray-500">
-                        <Mic className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                        onClick={handleSend}
-                        disabled={!message.trim()}
-                        className="bg-[#1A365D] hover:bg-[#2D4A6B] text-white"
-                    >
-                        <Send className="w-4 h-4" />
-                    </Button>
+                {/* <div className='rounded p-2 cursor-pointer hover:bg-gray-100' onClick={() => { }}>
+                    <Plus size={20} color='#71717A' />
                 </div>
 
-                <div className="mt-2 text-xs text-gray-500 text-center">
-                    Press Enter to send, Shift+Enter for new line
+                <div className='rounded p-2 cursor-pointer hover:bg-gray-100' onClick={() => { }}>
+                    <Mic size={20} color='#71717A' />
+                </div> */}
+
+                <div className='rounded p-2 mr-2 cursor-pointer bg-[#1A365D] hover:bg-[#294367] shadow-md hover:transition hover:shadow-xl' onClick={handleSubmit}>
+                    <Send size={20} color='white' />
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
-export default ChatInput
+export default ChatInput;

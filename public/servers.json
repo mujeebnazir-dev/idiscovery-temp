@@ -1,0 +1,10 @@
+{
+  "servers": [
+    {
+      "name": "icore-mcp-server",
+      "url": "http://localhost:3001/mcp",
+      "enabled": true,
+      "description": "My local MCP server with custom business logic"
+    }
+  ]
+}
