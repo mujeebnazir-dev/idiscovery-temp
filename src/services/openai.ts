@@ -50,8 +50,7 @@ export class OpenAIService {
     constructor(config: OpenAIConfig) {
         this.config = config;
         this.openai = new OpenAI({
-            apiKey: config.apiKey,
-            dangerouslyAllowBrowser: true // Required for browser usage
+            apiKey: config.apiKey
         });
     }
 

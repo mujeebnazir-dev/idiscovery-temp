@@ -1,7 +1,8 @@
 import { MCPClient } from './client';
 import { ServerConfig, ConversationContext, WorkflowExecution } from './types';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { OpenAIService, OpenAIConfig } from '../../services/openai';
+import { OpenAIService, OpenAIConfig } from '@/services/openai';
+import { loadServersConfig, getEnabledServers } from '@/config/servers';
 
 export class MCPClientManager {
     private clients = new Map<string, MCPClient>();
@@ -33,24 +34,21 @@ export class MCPClientManager {
     async initialize(): Promise<void> {
         if (this.initialized) return;
         try {
-            const response = await fetch('/servers.json');
-            console.log('Fetching servers.json configuration');
-            if (response.ok) {
-                const configData = await response.json();
-                this.servers = configData.servers || [];
-                const enabledServers = this.servers.filter(s => s.enabled);
+            // Load servers configuration using utility function
+            console.log('Loading servers configuration from config file');
+            
+            const config = loadServersConfig();
+            this.servers = config.servers || [];
+            const enabledServers = getEnabledServers();
 
-                for (const serverConfig of enabledServers) {
-                    const client = new MCPClient(serverConfig);
-                    await client.connect();
-                    this.clients.set(serverConfig.name, client);
-                }
-
-                this.initialized = true;
-                console.log('MCPClientManager initialized with servers:', this.servers.map(s => s.name));
-            } else {
-                throw new Error(`Failed to fetch servers.json: ${response.status}`);
+            for (const serverConfig of enabledServers) {
+                const client = new MCPClient(serverConfig);
+                await client.connect();
+                this.clients.set(serverConfig.name, client);
             }
+
+            this.initialized = true;
+            console.log('MCPClientManager initialized with servers:', this.servers.map(s => s.name));
         } catch (error) {
             console.warn('Could not load servers config file', error);
             this.initialized = false;
@@ -165,8 +163,6 @@ export class MCPClientManager {
         response?: any;
         isWorkflow: boolean;
     }> {
-        console.log('🔄 Processing query with workflow support:', query);
-
         const connectedClients = this.getConnectedClients();
         if (connectedClients.length === 0) {
             throw new Error('No connected MCP clients available');
@@ -199,9 +195,6 @@ export class MCPClientManager {
             };
         }
 
-        // Use recursive intelligent tool selection for analytical queries
-        console.log('🚀 Starting recursive tool selection for analytical query');
-
         try {
             // Build available tools list for estimation
             const allTools: Tool[] = [];
@@ -213,10 +206,9 @@ export class MCPClientManager {
                     });
                 });
             });
+            
             // Generate initial step estimation and initial response
-            console.log('📋 Generating initial step estimation...');
             const initialEstimation = await this.generateInitialStepEstimation(query, allTools);
-            console.log("ALL TOOLS:", allTools.map(t => t.name));
             console.log('📋 Initial estimation:', initialEstimation);
 
             // Send initial response to UI
@@ -252,7 +244,7 @@ export class MCPClientManager {
                 }
             };
         } catch (error) {
-            console.error('❌ Error in recursive tool selection:', error);
+            console.error('❌ Error in processing request:', error);
             return {
                 isWorkflow: false,
                 response: {
@@ -481,19 +473,16 @@ CRITICAL RULES:
 
         // 1. Check for max steps
         if (currentStep > maxSteps) {
-            console.log(`🔄 Stopping execution: Maximum steps (${maxSteps}) reached`);
             return this.formatFinalResponse(executedResults, 'max_steps_reached', estimatedSteps);
         }
 
         // 2. Check for max execution time
         if (timeElapsed > maxExecutionTime) {
-            console.log(`⏰ Stopping execution: Maximum time (${maxExecutionTime}ms) reached`);
             return this.formatFinalResponse(executedResults, 'timeout', estimatedSteps);
         }
 
         // 3. Get current step estimation
         if (estimatedSteps.length === 0) {
-            console.log('❌ No estimated steps available to guide execution');
             return this.formatFinalResponse(executedResults, 'no_estimation', estimatedSteps);
         }
 
@@ -518,7 +507,6 @@ CRITICAL RULES:
                 console.log(`❌ Max retries reached for step ${currentStep}. Aborting.`);
                 return this.formatFinalResponse(executedResults, 'max_retries', estimatedSteps);
             }
-
         }
 
         // 4. If retry, emit step_start with retry info
@@ -562,8 +550,6 @@ CRITICAL RULES:
         let toolResult;
         try {
             toolResult = await selectedClient.callTool(currentStepEstimation.estimatedTool, currentStepEstimation.arguments);
-            console.log(`✅ Step ${currentStep} executed using tool ${currentStepEstimation.estimatedTool}`);
-            console.log('Tool result:', toolResult);
         } catch (toolError) {
             // Emit error event with all context
             onStepUpdate?.({

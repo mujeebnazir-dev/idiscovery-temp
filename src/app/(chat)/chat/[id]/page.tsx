@@ -1,9 +1,8 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ChatSidebar from '@/components/chat/ChatSidebar'
 import ChatHome from '@/components/chat/ChatHome'
 import ChatConversation from '@/components/chat/ChatConversation'
-import { useMCP } from '@/hooks/useMCP'
 import ChatInput from '@/components/chat/ChatInput'
 
 interface Message {
@@ -11,7 +10,6 @@ interface Message {
     type: 'user' | 'ai'
     content: string
     timestamp: string
-    steps?: any[]
     isProcessing?: boolean
 }
 
@@ -19,11 +17,33 @@ const ChatPage = ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = React.use(params)
     const [messages, setMessages] = useState<Message[]>([])
     const [isConversationStarted, setIsConversationStarted] = useState(false)
-    const { isInitialized, processQuery, isProcessing, error } = useMCP()
+    const [isInitialized, setIsInitialized] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    // Check MCP initialization status on component mount
+    useEffect(() => {
+        const checkMCPStatus = async () => {
+            try {
+                const response = await fetch('/api/chat?action=status')
+                const data = await response.json()
+                if (data.success) {
+                    setIsInitialized(data.data.initialized)
+                    setError(null)
+                } else {
+                    setError(data.error?.message || 'Failed to initialize MCP')
+                }
+            } catch (err) {
+                setError('Failed to connect to MCP service')
+                console.error('MCP status check failed:', err)
+            }
+        }
+
+        checkMCPStatus()
+    }, [])
 
     const handleSendMessage = async (message: string) => {
         if (message.trim() && isInitialized) {
-
             const userMessage: Message = {
                 id: Date.now().toString(),
                 type: 'user',
@@ -33,50 +53,65 @@ const ChatPage = ({ params }: { params: Promise<{ id: string }> }) => {
 
             setMessages(prev => [...prev, userMessage])
             setIsConversationStarted(true)
+            setIsProcessing(true)
 
             const processingMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'ai',
                 content: 'Processing your request...',
                 timestamp: new Date().toLocaleTimeString(),
-                isProcessing: true,
-                steps: []
+                isProcessing: true
             }
 
             setMessages(prev => [...prev, processingMessage])
 
             try {
-                const result = await processQuery(
-                    message,
-                    (initialResponse) => {
-                        setMessages(prev => prev.map(msg =>
-                            msg.id === processingMessage.id
-                                ? { ...msg, content: initialResponse, isProcessing: true }
-                                : msg
-                        ))
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
                     },
-                    (stepUpdate) => {
-                        setMessages(prev => prev.map(msg =>
-                            msg.id === processingMessage.id
-                                ? {
-                                    ...msg,
-                                    steps: [...(msg.steps || []), stepUpdate]
-                                }
-                                : msg
-                        ))
-                    }
-                )
+                    body: JSON.stringify({
+                        message: message,
+                        chatId: id
+                    })
+                })
 
-                setMessages(prev => prev.map(msg =>
-                    msg.id === processingMessage.id
-                        ? {
-                            ...msg,
-                            content: result.response?.aiResponse || 'Processing completed',
-                            isProcessing: false
-                        }
-                        : msg
-                ))
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
+                const responseText = await response.text();
+
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    throw new Error(`Failed to parse response as JSON: ${responseText}`);
+                }
+
+                if (result.success) {
+                    setMessages(prev => prev.map(msg =>
+                        msg.id === processingMessage.id
+                            ? {
+                                ...msg,
+                                content: result.data.response || 'Processing completed',
+                                isProcessing: false
+                            }
+                            : msg
+                    ))
+                } else {
+                    setMessages(prev => prev.map(msg =>
+                        msg.id === processingMessage.id
+                            ? {
+                                ...msg,
+                                content: `Error: ${result.error?.message || 'Unknown error'}`,
+                                isProcessing: false
+                            }
+                            : msg
+                    ))
+                }
             } catch (err) {
                 setMessages(prev => prev.map(msg =>
                     msg.id === processingMessage.id
@@ -87,6 +122,8 @@ const ChatPage = ({ params }: { params: Promise<{ id: string }> }) => {
                         }
                         : msg
                 ))
+            } finally {
+                setIsProcessing(false)
             }
         }
     }
